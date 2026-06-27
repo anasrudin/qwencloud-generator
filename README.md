@@ -60,14 +60,67 @@ python3 generate_email_list.py yourgmailuser -o email_list.txt
 ```
 
 ### 4. Set up Gmail OAuth
-1. Create a project at [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable **Gmail API**
-3. Create **OAuth 2.0 credentials** (Desktop app type)
-4. Download `client_secret.json` to this folder
-5. Authorize each base Gmail account:
+
+The script needs Gmail API access to read verification emails. Here's how to set it up:
+
+#### 4a. Create Google Cloud credentials
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (any name)
+3. Go to **APIs & Services → Library** → search "Gmail API" → **Enable**
+4. Go to **APIs & Services → Credentials** → **Create Credentials** → **OAuth client ID**
+5. Application type: **Desktop app** → Create
+6. Download the JSON file (`client_secret_*.json`)
+7. Rename it to `client_secret.json` and place it in this folder
+
+#### 4b. Authorize your Gmail account(s)
+
+For each base Gmail account you want to use, you need to get an OAuth refresh token:
+
 ```bash
 python3 gmail_auth.py
 ```
+
+If you see `accounts: []` — that's normal! You haven't authorized any account yet.
+
+To authorize, generate an OAuth URL for your Gmail:
+
+```bash
+python3 -c "
+from gmail_auth import _default_client
+import urllib.parse
+
+client = _default_client()
+url = f'https://accounts.google.com/o/oauth2/auth?client_id={client["client_id"]}&redirect_uri=http%3A//localhost%3A8085/callback&scope=https%3A//www.googleapis.com/auth/gmail.readonly&response_type=code&access_type=offline&prompt=consent&login_hint=yourname%40gmail.com'
+print(url)
+"
+```
+
+Replace `yourname@gmail.com` with your actual Gmail address.
+
+1. Open the printed URL in your browser
+2. Login with that Gmail account
+3. Click **Allow** on the consent screen
+4. You'll be redirected to `http://localhost:8085/callback?code=4/0Abc...`
+5. Copy the full URL from the address bar
+6. Exchange the code:
+
+```bash
+python3 -c "
+from gmail_auth import exchange_code
+exchange_code('yourname@gmail.com', '4/0Abc...')
+print('Token saved!')
+"
+```
+
+Replace `yourname@gmail.com` with the same Gmail, and `4/0Abc...` with the code from the URL.
+
+Verify it worked:
+```bash
+python3 gmail_auth.py
+# Should show: accounts: ['yourname@gmail.com']
+```
+
+Repeat for each Gmail account you want to use.
 
 ## Usage
 
